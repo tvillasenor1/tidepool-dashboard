@@ -38,41 +38,94 @@ SAN_DIEGO_COASTAL_BBOX = {
     "nelng": -117.20,
 }
 
-# --- Curated list of common San Diego tidepool species --------------------
-# Grouped by informal category for chart legends/filters. Scientific names
-# are used for lookup since common names are ambiguous in the API.
+# --- Curated + broad taxa for San Diego tidepool species -----------------
+# Each entry has:
+#   name   - scientific name AT ANY RANK (species, genus, family, order...)
+#   common - display name used in the UI
+#   broad  - True for a higher-rank "catch-all" entry included specifically
+#            for comprehensive coverage; False for a hand-picked species.
+#
+# KEY INSIGHT: iNaturalist's taxon_id filter automatically includes all
+# DESCENDANT taxa (confirmed in the official API docs). So pointing at
+# order Nudibranchia pulls in every nudibranch species on iNaturalist
+# automatically -- far more comprehensive than hand-listing species, and it
+# self-updates as new species get added/observed. We mix both styles:
+# specific named species (for consistent per-species seasonality charts and
+# because broad entries dilute the species-distribution chart) PLUS a broad
+# entry per group (for comprehensive "did we miss anything" coverage).
+#
+# "broad" entries are NOT selected by default in the app (see app.py) --
+# they're opt-in via a "Include broad/undiscovered species" toggle, since
+# mixing a handful of specific species with one entry that silently expands
+# to hundreds of descendant taxa would make per-species charts misleading.
 TIDEPOOL_SPECIES = {
     "Anemones": [
-        "Anthopleura elegantissima",   # Aggregating anemone
-        "Anthopleura xanthogrammica",  # Giant green anemone
-        "Anthopleura sola",            # Solitary anemone
+        {"name": "Anthopleura elegantissima", "common": "Aggregating anemone", "broad": False},
+        {"name": "Anthopleura xanthogrammica", "common": "Giant green anemone", "broad": False},
+        {"name": "Anthopleura sola", "common": "Solitary anemone", "broad": False},
+        {"name": "Actiniaria", "common": "All sea anemones (broad, order-level)", "broad": True},
     ],
     "Sea stars & urchins (Echinoderms)": [
-        "Pisaster ochraceus",          # Ochre sea star
-        "Leptasterias sp.",            # Six-armed sea star
-        "Strongylocentrotus purpuratus",  # Purple sea urchin
+        {"name": "Pisaster ochraceus", "common": "Ochre sea star", "broad": False},
+        {"name": "Leptasterias sp.", "common": "Six-armed sea star", "broad": False},
+        {"name": "Strongylocentrotus purpuratus", "common": "Purple sea urchin", "broad": False},
+        {"name": "Asteroidea", "common": "All sea stars (broad, class-level)", "broad": True},
+        {"name": "Echinoidea", "common": "All sea urchins (broad, class-level)", "broad": True},
     ],
-    "Snails & limpets (Mollusks)": [
-        "Tegula funebralis",           # Black turban snail
-        "Lottia gigantea",             # Owl limpet
-        "Aplysia californica",         # California sea hare
-        "Mytilus californianus",       # California mussel
-        "Kelletia kelletii",           # Kellet's whelk
+    "Snails, limpets & bivalves (Mollusks)": [
+        {"name": "Tegula funebralis", "common": "Black turban snail", "broad": False},
+        {"name": "Lottia gigantea", "common": "Owl limpet", "broad": False},
+        {"name": "Mytilus californianus", "common": "California mussel", "broad": False},
+        {"name": "Kelletia kelletii", "common": "Kellet's whelk", "broad": False},
+        {"name": "Gastropoda", "common": "All marine snails/slugs (broad, class-level)", "broad": True},
+    ],
+    "Nudibranchs": [
+        # From southern_california_common_nudibranchs.csv -- scientific
+        # names confirmed current as of this writing (e.g. Ceratodoris
+        # rosacea, reclassified from Okenia rosacea in 2023/2024).
+        {"name": "Flabellinopsis iodinea", "common": "Spanish Shawl", "broad": False},
+        {"name": "Hermissenda opalescens", "common": "Opalescent Nudibranch", "broad": False},
+        {"name": "Ceratodoris rosacea", "common": "Hopkins' Rose", "broad": False},
+        {"name": "Diaulula sandiegensis", "common": "San Diego Dorid", "broad": False},
+        {"name": "Felimare californiensis", "common": "California Blue Dorid", "broad": False},
+        {"name": "Acanthodoris lutea", "common": "Sandalwood Dorid", "broad": False},
+        {"name": "Peltodoris nobilis", "common": "Noble Dorid", "broad": False},
+        {"name": "Limacia cockerelli", "common": "Cockerell's Dorid", "broad": False},
+        {"name": "Phidiana hiltoni", "common": "Hilton's Aeolid", "broad": False},
+        {"name": "Diaphoreolis lagunae", "common": "Laguna Aeolid", "broad": False},
+        {"name": "Nudibranchia", "common": "All nudibranchs (broad, order-level)", "broad": True},
     ],
     "Crabs & barnacles (Arthropods)": [
-        "Pachygrapsus crassipes",      # Striped shore crab
-        "Pugettia producta",           # Kelp crab
-        "Tetraclita rubescens",        # Volcano barnacle
+        {"name": "Pachygrapsus crassipes", "common": "Striped shore crab", "broad": False},
+        {"name": "Pugettia producta", "common": "Kelp crab", "broad": False},
+        {"name": "Tetraclita rubescens", "common": "Volcano barnacle", "broad": False},
+        {"name": "Brachyura", "common": "All true crabs (broad, infraorder-level)", "broad": True},
     ],
     "Fish": [
-        "Clinocottus analis",          # Woolly sculpin
-        "Girella nigricans",           # Opaleye
-        "Gibbonsia elegans",           # Spotted kelpfish
+        {"name": "Clinocottus analis", "common": "Woolly sculpin", "broad": False},
+        {"name": "Girella nigricans", "common": "Opaleye", "broad": False},
+        {"name": "Gibbonsia elegans", "common": "Spotted kelpfish", "broad": False},
+        # No broad entry here on purpose: class Actinopterygii (bony fish)
+        # is enormous and includes every open-ocean/offshore fish, so a
+        # class-level catch-all would dilute "tidepool fish" badly even
+        # with the geo filter applied. If you want broader fish coverage,
+        # add specific intertidal genera/families instead (e.g. Girellidae,
+        # Cottidae) rather than the whole class.
     ],
 }
 
-# Flat list used for API lookups
-ALL_SPECIES_NAMES = [name for group in TIDEPOOL_SPECIES.values() for name in group]
+# Flat list of (scientific_name, common_name) used for API lookups and the
+# species picker. Excludes broad entries by default -- see
+# TIDEPOOL_SPECIES_BROAD below for those.
+ALL_SPECIES_NAMES = [
+    item["name"] for group in TIDEPOOL_SPECIES.values() for item in group if not item["broad"]
+]
+NAME_TO_COMMON = {
+    item["name"]: item["common"] for group in TIDEPOOL_SPECIES.values() for item in group
+}
+BROAD_TAXA_NAMES = [
+    item["name"] for group in TIDEPOOL_SPECIES.values() for item in group if item["broad"]
+]
 
 # --- Optional: community-curated iNaturalist Projects ---------------------
 # Projects are a supplementary/cross-check data source, not a replacement
