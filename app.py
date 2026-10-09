@@ -10,7 +10,7 @@ import streamlit as st
 
 import inat_api
 from species_config import (
-    ALL_SPECIES_NAMES, CURATED_PROJECTS, SAN_DIEGO_COASTAL_BBOX,
+    ALL_SPECIES_NAMES, CURATED_PROJECTS, NAME_TO_COMMON, SAN_DIEGO_COASTAL_BBOX,
     TIDEPOOL_SITES, TIDEPOOL_SPECIES,
 )
 
@@ -50,6 +50,20 @@ with st.sidebar:
         "Species group", list(TIDEPOOL_SPECIES.keys()), default=list(TIDEPOOL_SPECIES.keys())
     )
 
+    include_broad = st.checkbox(
+        "Include broad taxonomic coverage (e.g. ALL nudibranchs, not just the "
+        "10 named ones)",
+        value=False,
+        help=(
+            "Each group has a handful of hand-picked species PLUS one "
+            "optional 'broad' entry at a higher taxonomic rank (e.g. order "
+            "Nudibranchia). iNaturalist's taxon_id filter automatically "
+            "includes descendant taxa, so turning this on surfaces every "
+            "matching species on iNaturalist -- even ones not individually "
+            "named below -- at the cost of a noisier species list."
+        ),
+    )
+
     date_range = st.date_input(
         "Date range",
         value=(pd.Timestamp.today() - pd.Timedelta(days=365), pd.Timestamp.today()),
@@ -60,9 +74,13 @@ with st.sidebar:
     )
     quality_grade = "research" if quality.startswith("Research grade") else "research,needs_id"
 
-# Resolve which species names are in scope based on group selection
+# Resolve which species names are in scope based on group selection + the
+# broad-coverage toggle
 selected_names = tuple(
-    name for group, names in TIDEPOOL_SPECIES.items() if group in group_choice for name in names
+    item["name"]
+    for group, items in TIDEPOOL_SPECIES.items() if group in group_choice
+    for item in items
+    if include_broad or not item["broad"]
 ) or tuple(ALL_SPECIES_NAMES)
 
 # Resolve scientific names -> taxon IDs (cached 24h)
@@ -188,7 +206,10 @@ else:
 # Seasonality for a chosen key species
 # ---------------------------------------------------------------------
 st.subheader("Seasonality of a Key Species")
-key_species = st.selectbox("Pick a species", list(name_to_id.keys()))
+key_species = st.selectbox(
+    "Pick a species", list(name_to_id.keys()),
+    format_func=lambda sci_name: f"{NAME_TO_COMMON.get(sci_name, sci_name)} ({sci_name})",
+)
 key_id = name_to_id.get(key_species)
 if key_id:
     try:
@@ -207,7 +228,8 @@ if key_id:
         [{"month": month_names[int(m) - 1], "count": c} for m, c in sorted(moy.items(), key=lambda x: int(x[0]))]
     )
     if not moy_df.empty:
-        fig3 = px.bar(moy_df, x="month", y="count", title=f"{key_species}: observations by month of year")
+        key_common = NAME_TO_COMMON.get(key_species, key_species)
+        fig3 = px.bar(moy_df, x="month", y="count", title=f"{key_common}: observations by month of year")
         st.plotly_chart(fig3, use_container_width=True)
     else:
         st.info("No seasonal data available for this species under current filters.")
